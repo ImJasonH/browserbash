@@ -1,11 +1,12 @@
 const express = require('express');
 const app = express();
-const server = require('http').createServer(app);
-const io = require('socket.io')(server);
+const http = require('http').Server(app);
+const io = require('socket.io')(http);
 const spawn = require('child_process').spawn;
 const sh = spawn('bash');
+const port = process.env.PORT || 8080;
 
-app.use(express.static('./'))
+app.use(express.static(__dirname + '/public'));
 
 sh.stdout.on('data', function(data) {
   io.emit('message', data);
@@ -17,6 +18,11 @@ sh.stderr.on('data', function(data) {
 
 sh.on('exit', function (code) {
   io.emit('exit', '** Shell exited: '+code+' **');
+
+  http.close(() => {
+    console.log('Process terminated')
+  });
+  process.exit();
 });
 
 io.on('connection', function(client){
@@ -26,6 +32,5 @@ io.on('connection', function(client){
   });
 });
 
-server.listen(8080, function(){
-  console.log('server started');
-})
+http.listen(port, () => console.log('listening on port ' + port));
+
